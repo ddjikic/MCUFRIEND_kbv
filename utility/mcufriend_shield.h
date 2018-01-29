@@ -353,8 +353,13 @@ void write_8(uint8_t x)
 #else                      //regular ST Core
 #define REGS(x) x
 #endif
+#if 0                      //BSRR is much faster than ODR.  SPFD5408 is too slow for STM32F4xx
 #define PIN_HIGH(port, pin)   (port)-> REGS(BSRR) = (1<<(pin))
 #define PIN_LOW(port, pin)    (port)-> REGS(BSRR) = (1<<((pin)+16))
+#else
+#define PIN_HIGH(port, pin)   (port)-> REGS(ODR) |= (1<<(pin))
+#define PIN_LOW(port, pin)    (port)-> REGS(ODR) &= ~(1<<((pin)))
+#endif
 #define PIN_MODE2(reg, pin, mode) reg=(reg&~(0x3<<((pin)<<1)))|(mode<<((pin)<<1))
 #define GROUP_MODE(port, reg, mask, val)  {port->REGS(reg) = (port->REGS(reg) & ~(mask)) | ((mask)&(val)); }
 
@@ -401,7 +406,7 @@ void write_8(uint8_t x)
 #define PIN_OUTPUT(port, pin) PIN_MODE2((port)->MODER, pin, 0x1)
 
 #elif defined(STM32F401xE) || defined(STM32F411xE)
-#define WRITE_DELAY { WR_ACTIVE; WR_ACTIVE; }
+#define WRITE_DELAY { WR_ACTIVE; WR_ACTIVE; WR_ACTIVE; WR_ACTIVE; }
 #define READ_DELAY  { RD_ACTIVE; RD_ACTIVE; RD_ACTIVE; RD_ACTIVE; RD_ACTIVE; RD_ACTIVE; }
 #define GPIO_INIT()   { RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN; }
 #define PIN_OUTPUT(port, pin) PIN_MODE2((port)->MODER, pin, 0x1)
