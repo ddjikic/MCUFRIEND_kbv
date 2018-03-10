@@ -233,7 +233,8 @@ uint16_t MCUFRIEND_kbv::readID(void)
         uint8_t cmds[] = {0xFF, 0x83, 0x57};
         pushCommand(0xB9, cmds, 3);
         msb = readReg(0xD0);
-        if (msb == 0x99 || msb == 0x90)
+        if (msb == 0x99) return 0x0099;
+        if (msb == 0x90)
 #endif
             return 0x9090;      //BIG CHANGE: HX8357-D was 0x8357
     }
@@ -793,7 +794,7 @@ void MCUFRIEND_kbv::invertDisplay(boolean i)
 #define TFTLCD_DELAY8 0x7F
 static void init_table(const void *table, int16_t size)
 {
-    uint8_t *p = (uint8_t *) table, dat[24];            //R61526 has GAMMA[22] 
+    uint8_t *p = (uint8_t *) table, dat[36];            //R61526 has GAMMA[22], HX8357_99 has GAMMA[34]
     while (size > 0) {
         uint8_t cmd = pgm_read_byte(p++);
         uint8_t len = pgm_read_byte(p++);
@@ -1903,6 +1904,25 @@ case 0x4532:    // thanks Leodino
             0xB0, 1, 0x00,              // unlocks E0, F0
         };
         table8_ads = HX8357D_regValues, table_size = sizeof(HX8357D_regValues);
+        p16 = (int16_t *) & HEIGHT;
+        *p16 = 480;
+        p16 = (int16_t *) & WIDTH;
+        *p16 = 320;
+        break;
+
+    case 0x0099:                //HX8357-D matches datasheet
+        _lcd_capable = AUTO_READINC | MIPI_DCS_REV1 | MV_AXIS | REV_SCREEN | READ_24BITS;
+        static const uint8_t HX8357_99_regValues[] PROGMEM = {
+            (0xB9), 3, 0xFF, 0x83, 0x57,   // SETEXTC
+            TFTLCD_DELAY8, 150,
+            TFTLCD_DELAY8, 150,
+            (0xB6), 1, 0x25,   // SETCOM [4B 00] -2.5V+37*0.02V=-1.76V [-1.00V]
+            (0xC0), 6, 0x50, 0x50, 0x01, 0x3C, 0x1E, 0x08,  // SETSTBA [73 50 00 3C C4 08]
+            (0xB4), 7, 0x02, 0x40, 0x00, 0x2A, 0x2A, 0x0D, 0x78, // SETCYC [02 40 00 2A 2A 0D 96]
+            // HX8357D_SETGAMMA [0B 0C 11 1D 25 37 43 4B 4E 47 41 39 35 31 2E 21 1C 1D 1D 26 31 44 4E 56 44 3F 39 33 31 2E 28 1D E0 01]
+            (0xE0),34, 0x02, 0x0A, 0x11, 0x1D, 0x23, 0x35, 0x41, 0x4B, 0x4B, 0x42, 0x3A, 0x27, 0x1B, 0x08, 0x09, 0x03, 0x02, 0x0A, 0x11, 0x1D, 0x23, 0x35, 0x41, 0x4B, 0x4B, 0x42, 0x3A, 0x27, 0x1B, 0x08, 0x09, 0x03, 0x00, 0x01,
+        };
+        table8_ads = HX8357_99_regValues, table_size = sizeof(HX8357_99_regValues);
         p16 = (int16_t *) & HEIGHT;
         *p16 = 480;
         p16 = (int16_t *) & WIDTH;
